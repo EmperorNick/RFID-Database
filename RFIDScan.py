@@ -30,43 +30,35 @@ import MFRC522
 import signal
 import sys
 
+sys.stdout.reconfigure(line_buffering=True)
 continue_reading = True
 
-
-# function to read uid an convert it to a string
+# Function to read UID and convert it to a string
 def uidToString(uid):
     return ''.join(format(i, '02X') for i in uid)
 
-
-# Capture SIGINT for cleanup when the script is aborted
+# Cleanup function for SIGINT and SIGTERM
 def end_read(signal, frame):
     global continue_reading
     continue_reading = False
-    print("Stopped reading.")
+    print("Stopped reading and cleaned up.")
     sys.exit(0)
 
-# Hook the SIGINT
+# Hook the SIGINT and SIGTERM
 signal.signal(signal.SIGINT, end_read)
+signal.signal(signal.SIGTERM, end_read)
 
 # Create an object of the class MFRC522
 MIFAREReader = MFRC522.MFRC522()
-print("Press Ctrl-C to stop.")
+#print("RFID Scanner Ready. Press Ctrl-C to stop.") #Removed as no need from
 
-# This loop keeps checking for chips.
-# If one is near it will get the UID and authenticate
+# Main loop
 while continue_reading:
-
-    # Scan for cards
     status, TagType = MIFAREReader.MFRC522_Request(MIFAREReader.PICC_REQIDL)
-
-    # If a card is found
     if status == MIFAREReader.MI_OK:
-        # Get the UID of the card
         status, uid = MIFAREReader.MFRC522_SelectTagSN()
-        # If we have the UID, continue
         if status == MIFAREReader.MI_OK:
-            print(uidToString(uid)) #Output the UID
-            print("Card read UID: %s" % uidToString(uid))
+            print(f"Card detected with UID: {uidToString(uid)}")
         else:
-            print("Failed to read UID")
+            print("Failed to read UID.")
 

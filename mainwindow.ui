@@ -110,6 +110,16 @@
      <set>Qt::AlignmentFlag::AlignCenter</set>
     </property>
    </widget>
+   <widget class="QTextEdit" name="textEdit">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>210</y>
+      <width>151</width>
+      <height>31</height>
+     </rect>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -117,7 +127,7 @@
      <x>0</x>
      <y>0</y>
      <width>170</width>
-     <height>25</height>
+     <height>19</height>
     </rect>
    </property>
   </widget>

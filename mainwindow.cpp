@@ -11,6 +11,7 @@
 #include <QKeyEvent>
 #include <QProcess>
 #include <QTimer>
+#include <QTextEdit>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -168,5 +169,36 @@ void MainWindow::handleRFIDError() {
     if (!error.isEmpty()) {
         // Print the error to the debug console
         qDebug() << "RFID scanning process error:" << error;
+    }
+}
+
+void MainWindow::startRFIDPythonScript() {
+    // Create a QProcess instance
+    QProcess *process = new QProcess(this);
+
+    // Set the program and arguments
+    process->setProgram("python3");
+    process->setArguments({"/path/to/RFIDScan.py"});
+
+    // Connect to QProcess signals to capture output
+    connect(process, &QProcess::readyReadStandardOutput, [process, this]() {
+        QString output = process->readAllStandardOutput();
+        qDebug() << "Python Output:" << output; // Log output to the console
+        // Optional: append to a QTextEdit or QLabel in the UI
+        ui->textEdit->append(output);
+    });
+
+    connect(process, &QProcess::readyReadStandardError, [process, this]() {
+        QString error = process->readAllStandardError();
+        qDebug() << "Python Error:" << error; // Log errors to the console
+        // Optional: append to a QTextEdit or QLabel in the UI
+        ui->textEdit->append(error);
+    });
+
+    // Start the process and check if it starts successfully
+    process->start();
+    if (!process->waitForStarted()) {
+        qDebug() << "Failed to start Python script.";
+        ui->textEdit->append("Failed to start Python script.");
     }
 }

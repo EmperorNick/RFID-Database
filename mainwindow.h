@@ -32,6 +32,7 @@ private slots:
     void handleRFIDOutput();
     void handleProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
     void handleRFIDError();
+    void startRFIDPythonScript();
 
 private:
     Ui::MainWindow *ui;
