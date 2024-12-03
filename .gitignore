@@ -1,0 +1,22 @@
+# Ignore build directories
+build-*/
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.app
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+
+# Ignore Qt Creator files
+*.pro.user
+*.qtc
+.idea/
+.vscode/
+
+# Ignore system files
+Thumbs.db
+.DS_Store
