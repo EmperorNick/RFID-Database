@@ -58,7 +58,7 @@ while continue_reading:
     if status == MIFAREReader.MI_OK:
         status, uid = MIFAREReader.MFRC522_SelectTagSN()
         if status == MIFAREReader.MI_OK:
-            print(f"Card detected with UID: {uidToString(uid)}")
+            print(f"{uidToString(uid)}")
         else:
             print("Failed to read UID.")
 

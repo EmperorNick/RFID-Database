@@ -17,16 +17,19 @@ SOURCES += \
     databasedialog.cpp \
     main.cpp \
     mainwindow.cpp \
-    mqttmanager.cpp
+    mqttmanager.cpp \
+    writedialog.cpp
 
 HEADERS += \
     databasedialog.h \
     mainwindow.h \
-    mqttmanager.h
+    mqttmanager.h \
+    writedialog.h
 
 FORMS += \
     databasedialog.ui \
-    mainwindow.ui
+    mainwindow.ui \
+    writedialog.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

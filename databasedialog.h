@@ -15,15 +15,17 @@ class DatabaseDialog : public QDialog
 public:
     explicit DatabaseDialog(QWidget *parent = nullptr);
     ~DatabaseDialog();
-    void setDatabase(QSqlDatabase db); // Set the database for this dialog
+    void setDatabase(QSqlDatabase db);
     void displayDatabaseContents();
     void connectToDatabase();
 
 private:
     Ui::DatabaseDialog *ui;
-    QSqlDatabase db; // Store the database connection
+    QSqlDatabase db;
     void insertIntoDatabase();
     void deleteSelectedEntry();
+    void openWriteDialog();
+    void addDataToDatabase(const QString &batch, int wafers, const QString &process, const QString &location);
 };
 
 #endif // DATABASEDIALOG_H

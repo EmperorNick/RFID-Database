@@ -1,6 +1,6 @@
 #include "databasedialog.h"
-#include "mainwindow.h"
 #include "ui_databasedialog.h"
+#include "writedialog.h"
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QMessageBox>
@@ -11,16 +11,12 @@ DatabaseDialog::DatabaseDialog(QWidget *parent)
     , ui(new Ui::DatabaseDialog)
 {
     ui->setupUi(this);
-    // Set up the table widget headers
-    ui->tableWidget->setColumnCount(2);  // 2 columns: Name and Age
-    ui->tableWidget->setHorizontalHeaderLabels(QStringList() << "Name" << "Age");
+    ui->tableWidget->setColumnCount(4);
+    ui->tableWidget->setHorizontalHeaderLabels(QStringList() << "Batch" << "No of Wafers" << "Process" << "Location");
 
-    connect(ui->addButton, &QPushButton::clicked, this, &DatabaseDialog::insertIntoDatabase);
-    // Connect exit button
-    connect(ui->exitButton, &QPushButton::clicked, this, &DatabaseDialog::close);
-    // Connect refreshButton to the displayDatabaseContents function
     connect(ui->refreshButton, &QPushButton::clicked, this, &DatabaseDialog::displayDatabaseContents);
-    // Connect deleteButton to the delete specific entries
+    connect(ui->addButton, &QPushButton::clicked, this, &DatabaseDialog::openWriteDialog);
+    connect(ui->exitButton, &QPushButton::clicked, this, &DatabaseDialog::close);
     connect(ui->deleteButton, &QPushButton::clicked, this, &DatabaseDialog::deleteSelectedEntry);
 }
 
@@ -29,93 +25,71 @@ DatabaseDialog::~DatabaseDialog()
     delete ui;
 }
 
-void DatabaseDialog::setDatabase(QSqlDatabase database) {
-    db = database; // Set the passed database connection
-}
-
-void DatabaseDialog::insertIntoDatabase() {
-    QString name = ui->nameInput->text();  // Get name as a string
-    QString ageString = ui->ageInput->text();  // Get age as a string
-
-    QSqlQuery query;
-    query.prepare("INSERT INTO people (name, age) VALUES (:name, :age)");
-    query.bindValue(":name", name);
-    query.bindValue(":age", ageString);
-
-    if (name.isEmpty()) {
-        qDebug() << "Name field is empty.";
-        QMessageBox::warning(this, "Input Error", "Please enter a name and/or age wanker");
-        return;
-    }
-    if (ageString.isEmpty()) {
-            qDebug() << "Age field is empty.";
-            QMessageBox::warning(this, "Input Error", "Please enter a name and/or age wanker");
-            return;
-        }
-
-    if (!query.exec()) {
-        qDebug() << "Error inserting into the database: " << query.lastError().text();
-        QMessageBox::warning(this, "Insert Error", "Failed to insert data.");
-    }
-    else {
-        QMessageBox::information(this, "Success", "Data inserted successfully!");
-    }
-    displayDatabaseContents(); // Refresh the table
-    ui->nameInput->clear(); // Clear the input fields after successful insertion
-    ui->ageInput->clear();
-}
-
 void DatabaseDialog::displayDatabaseContents() {
-    // SQL query to retrieve all entries from the 'people' table
-    QSqlQuery query("SELECT name, age FROM people");
+    QSqlQuery query("SELECT batch, wafers, process, location FROM RFIDData");
 
-    // Clear the table before adding new data
     ui->tableWidget->setRowCount(0);
 
     int row = 0;
     while (query.next()) {
-        QString name = query.value(0).toString();  // Get the name
-        int age = query.value(1).toInt();          // Get the age
+        QString batch = query.value(0).toString();
+        int wafers = query.value(1).toInt();
+        QString process = query.value(2).toString();
+        QString location = query.value(3).toString();
 
-        // Insert a new row in the table
         ui->tableWidget->insertRow(row);
+        ui->tableWidget->setItem(row, 0, new QTableWidgetItem(batch));
+        ui->tableWidget->setItem(row, 1, new QTableWidgetItem(QString::number(wafers)));
+        ui->tableWidget->setItem(row, 2, new QTableWidgetItem(process));
+        ui->tableWidget->setItem(row, 3, new QTableWidgetItem(location));
 
-        // Populate the table with the retrieved data
-        ui->tableWidget->setItem(row, 0, new QTableWidgetItem(name));
-        ui->tableWidget->setItem(row, 1, new QTableWidgetItem(QString::number(age)));
-
-        row++;  // Move to the next row
+        row++;
     }
 }
-void DatabaseDialog::connectToDatabase() {
-    db = QSqlDatabase::addDatabase("QSQLITE");
-    db.setDatabaseName("test.db");
 
-    if (!db.open()) {
-        QMessageBox::warning(this, "Database Error", "Unable to open database: " + db.lastError().text());
+void DatabaseDialog::openWriteDialog() {
+    WriteDialog *writeDialog = new WriteDialog(this);
+    connect(parentWidget(), SIGNAL(uidScanned(QString)), writeDialog, SLOT(setUID(QString)));  // Connect UID updates
+    connect(writeDialog, &WriteDialog::dataSubmitted, this, &DatabaseDialog::addDataToDatabase);
+    writeDialog->exec();  // Show as a modal dialog
+}
+
+void DatabaseDialog::addDataToDatabase(const QString &batch, int wafers, const QString &process, const QString &location) {
+    QSqlQuery query;
+    query.prepare("INSERT OR REPLACE INTO RFIDData (batch, wafers, process, location) "
+                  "VALUES (:batch, :wafers, :process, :location)");
+    query.bindValue(":batch", batch);
+    query.bindValue(":wafers", wafers);
+    query.bindValue(":process", process);
+    query.bindValue(":location", location);
+
+    if (!query.exec()) {
+        QMessageBox::warning(this, "Insert/Replace Error", "Failed to insert or replace data: " + query.lastError().text());
+    } else {
+        QMessageBox::information(this, "Success", "Data inserted/replaced successfully!");
+        displayDatabaseContents();
     }
 }
+
 void DatabaseDialog::deleteSelectedEntry() {
-    // Get the selected row
-    int selectedRow = ui->tableWidget->currentRow();
+    int selectedRow = ui->tableWidget->currentRow();  // Get the currently selected row
     if (selectedRow < 0) {
         QMessageBox::warning(this, "Delete Error", "No entry selected!");
         return;
     }
 
-    // Get the name from the selected row (or another identifier like ID)
-    QString name = ui->tableWidget->item(selectedRow, 0)->text();
+    QString batch = ui->tableWidget->item(selectedRow, 0)->text();  // Get the UID (batch) from the first column
 
-    // Prepare the SQL query to delete the entry
+    // Prepare and execute the DELETE SQL query
     QSqlQuery query;
-    query.prepare("DELETE FROM people WHERE name = :name");
-    query.bindValue(":name", name);
+    query.prepare("DELETE FROM RFIDData WHERE batch = :batch");
+    query.bindValue(":batch", batch);
 
     if (!query.exec()) {
-        qDebug() << "Error deleting from the database: " << query.lastError().text();
-        QMessageBox::warning(this, "Delete Error", "Failed to delete entry.");
+        QMessageBox::warning(this, "Delete Error", "Failed to delete entry: " + query.lastError().text());
+        qDebug() << "Error deleting entry:" << query.lastError().text();
     } else {
         QMessageBox::information(this, "Success", "Entry deleted successfully!");
-        displayDatabaseContents(); // Refresh the table
+        displayDatabaseContents();  // Refresh the table after deletion
     }
 }

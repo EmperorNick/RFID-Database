@@ -40,6 +40,9 @@ private:
     void setupMqtt(); // Declare the setupMqtt method
     MqttManager *mqttManager;
     QProcess *rfidProcess;
+
+signals:
+    void uidScanned(const QString &uid);  // Signal to emit scanned UID
 };
 
 #endif // MAINWINDOW_H

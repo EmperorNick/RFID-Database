@@ -75,10 +75,11 @@ void MainWindow::connectToDatabase() {
     }
 
     QSqlQuery query;
-    query.exec("CREATE TABLE IF NOT EXISTS people ("
-               "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-               "name TEXT, "
-               "age INTEGER)");
+    query.exec("CREATE TABLE IF NOT EXISTS RFIDData ("
+               "batch TEXT PRIMARY KEY, "  // UID as PRIMARY KEY
+               "wafers INTEGER NOT NULL, "
+               "process TEXT NOT NULL, "
+               "location TEXT)");
 }
 
 void MainWindow::openDatabaseDialog() {
@@ -148,9 +149,8 @@ void MainWindow::pollRFID() {
 void MainWindow::handleRFIDOutput() {
     QString output = rfidProcess->readAllStandardOutput().trimmed();
     if (!output.isEmpty()) {
-        // Update the label with the detected UID
         ui->messageLabel->setText("Tag UID: " + output);
-        // Print the output to the debug console
+        emit uidScanned(output);  // Emit UID to other parts of the program
         qDebug() << "Detected RFID Tag UID:" << output;
     }
 }
