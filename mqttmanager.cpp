@@ -11,6 +11,8 @@ MqttManager::MqttManager(const QString &host, quint16 port, QObject *parent)
     // Connect the message received signal
     connect(client, &QMqttClient::messageReceived, this, &MqttManager::onMessageReceived);
 
+    connect(client, &QMqttClient::messageReceived, this, &MqttManager::onMessageReceived);
+
     // Connect the connected signal to the onConnected slot
     connect(client, &QMqttClient::connected, this, &MqttManager::onConnected);
 
@@ -51,14 +53,16 @@ void MqttManager::subscribeToTopic(const QString &topic) {
 }
 
 void MqttManager::onMessageReceived(const QByteArray &message, const QMqttTopicName &topic) {
-    qDebug() << "Message received on topic" << topic.name() << ":" << message;
-    emit messageReceived(QString(message), topic.name());
+    QString receivedData = QString::fromUtf8(message);
+    QString receivedTopic = topic.name();
+    emit logMessage(QString("Received data on topic '%1': %2").arg(receivedTopic, receivedData));
+    handleSubscribedData(receivedTopic, message);
 }
 
 void MqttManager::onConnected() {
     qDebug() << "Connected to MQTT broker";
     subscribeToTopic("test/update");  // Subscribe to the "test/update" topic
-  //  startPeriodicPublishing(); // Start publishing once connected
+    //startPeriodicPublishing(); // Start publishing once connected
 }
 
 void MqttManager::startPeriodicPublishing() {
@@ -72,5 +76,22 @@ void MqttManager::publishDatabaseData() {
         int age = query.value("age").toInt();
         QString message = QString("Name: %1, Age: %2").arg(name).arg(age);
         publishMessage("database/people", message);
+    }
+}
+
+void MqttManager::publishDatabaseEntry(const QString &topic, const QString &data) {
+    if (client && client->state() == QMqttClient::Connected) {
+        client->publish(topic, data.toUtf8());
+    } else {
+        emit logMessage("MQTT is not connected. Unable to publish data.");
+    }
+}
+
+void MqttManager::handleSubscribedData(const QString &topic, const QByteArray &message) {
+    // Handle specific topics if necessary
+    if (topic == "some/specific/topic") {
+        // Process the message for a specific topic
+    } else {
+        emit logMessage(QString("Unhandled topic: %1 with data: %2").arg(topic, QString::fromUtf8(message)));
     }
 }

@@ -18,15 +18,19 @@ public:
     void subscribeToTopic(const QString &topic);
     void startPeriodicPublishing();
     QMqttClient* getClient() const { return client; }
+    void publishDatabaseEntry(const QString &topic, const QString &data);
+    void handleSubscribedData(const QString &topic, const QByteArray &message);
 
 signals: // Add this signals section
     void messageReceived(const QString &message, const QMqttTopicName &topic); // Signal declaration
     void statusChanged(const QString &status);
+    void logMessage(const QString &message);
 
 private slots:
     void onMessageReceived(const QByteArray &message, const QMqttTopicName &topic); // Updated parameter type
     void onConnected();
     void publishDatabaseData(); // Periodic publishing function
+
 
 private:
     QMqttClient *client; // Pointer to the MQTT client

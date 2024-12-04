@@ -1,34 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf8 -*-
-#
-#    Copyright 2018 Daniel Perron
-#
-#    Base on Mario Gomez <mario.gomez@teubi.co>   MFRC522-Python
-#
-#    This file use part of MFRC522-Python
-#    MFRC522-Python is a simple Python implementation for
-#    the MFRC522 NFC Card Reader for the Raspberry Pi.
-#
-#    MFRC522-Python is free software:
-#    you can redistribute it and/or modify
-#    it under the terms of
-#    the GNU Lesser General Public License as published by the
-#    Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
-#
-#    MFRC522-Python is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU Lesser General Public License for more details.
-#
-#    You should have received a copy of the
-#    GNU Lesser General Public License along with MFRC522-Python.
-#    If not, see <http://www.gnu.org/licenses/>.
-#
 
 import MFRC522
 import signal
 import sys
+import time
 
 sys.stdout.reconfigure(line_buffering=True)
 continue_reading = True
@@ -48,17 +24,42 @@ def end_read(signal, frame):
 signal.signal(signal.SIGINT, end_read)
 signal.signal(signal.SIGTERM, end_read)
 
+# Initialize the RFID reader
+def initialize_reader():
+    try:
+        reader = MFRC522.MFRC522()
+        print("RFID reader initialized.")
+        return reader
+    except Exception as e:
+        print(f"Error initializing RFID reader: {e}")
+        sys.exit(1)
+
 # Create an object of the class MFRC522
-MIFAREReader = MFRC522.MFRC522()
-#print("RFID Scanner Ready. Press Ctrl-C to stop.") #Removed as no need from
+MIFAREReader = initialize_reader()
 
 # Main loop
 while continue_reading:
-    status, TagType = MIFAREReader.MFRC522_Request(MIFAREReader.PICC_REQIDL)
-    if status == MIFAREReader.MI_OK:
-        status, uid = MIFAREReader.MFRC522_SelectTagSN()
-        if status == MIFAREReader.MI_OK:
-            print(f"{uidToString(uid)}")
-        else:
-            print("Failed to read UID.")
+    try:
+        status, TagType = MIFAREReader.MFRC522_Request(MIFAREReader.PICC_REQIDL)
 
+        if status == MIFAREReader.MI_OK:
+            status, uid = MIFAREReader.MFRC522_SelectTagSN()
+
+            if status == MIFAREReader.MI_OK:
+                print(f"{uidToString(uid)}")
+            else:
+                print("Failed to read UID.")
+        else:
+            time.sleep(0.1)  # Slight delay to prevent CPU overuse
+
+    except KeyboardInterrupt:
+        print("KeyboardInterrupt detected. Stopping...")
+        break
+    except IOError as e:
+        print(f"I/O error occurred: {e}. Reinitializing RFID reader...")
+        MIFAREReader = initialize_reader()
+    except Exception as e:
+        print(f"Unexpected error: {e}. Retrying...")
+        time.sleep(1)
+
+print("Program terminated.")

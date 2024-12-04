@@ -13,7 +13,7 @@ WriteDialog::WriteDialog(QWidget *parent)
     ui->setupUi(this);
 
     // Populate process dropdown
-    ui->processDropdown->addItems({"Recipe A", "Recipe B", "Recipe C"});
+    ui->processDropdown->addItems({"VB", "VL", "VC", "MR", "LB"});
 
     connect(rfidProcess, &QProcess::readyReadStandardOutput, this, &WriteDialog::handleScanOutput);
     connect(ui->submitButton, &QPushButton::clicked, this, &WriteDialog::submitData);
@@ -37,7 +37,7 @@ void WriteDialog::submitData() {
     int wafers = ui->waferInput->text().toInt();
     QString process = ui->processDropdown->currentText();
 
-    if (batch.isEmpty() || wafers <= 0 || process.isEmpty()) {
+    if (batch.isEmpty() || wafers <= 0 || wafers > 25 || process.isEmpty()) {
         QMessageBox::warning(this, "Input Error", "Please fill in all fields.");
         return;
     }

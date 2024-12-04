@@ -22,6 +22,12 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     setupMqtt();  // Set up MQTT connections
 
+    mqttManager->publishDatabaseEntry("test.db", QByteArray("Test message"));
+
+    QString topic = "test.db";
+    QString data = "<Formatted database data>";  // Fetch and format database content
+    mqttManager->publishDatabaseEntry(topic, data);
+
 /***************************************RFID START***********************************************************************/
 
     // Connect the process signals for output handling
@@ -116,7 +122,7 @@ void MainWindow::connectToMqttWithIpInput() {
     bool ok;
     QString ip = QInputDialog::getText(this, tr("MQTT Broker IP"),
                                        tr("Enter MQTT Broker IP:"), QLineEdit::Normal,
-                                       "", &ok);
+                                       "192.168", &ok);
     if (ok && !ip.isEmpty()) {
         mqttManager->getClient()->setHostname(ip); // Update MQTT client hostname
         mqttManager->connectToBroker(); // Connect to the new broker IP
