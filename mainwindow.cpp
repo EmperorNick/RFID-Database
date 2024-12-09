@@ -22,11 +22,10 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     setupMqtt();  // Set up MQTT connections
 
-    mqttManager->publishDatabaseEntry("test.db", QByteArray("Test message"));
-
-    QString topic = "test.db";
-    QString data = "<Formatted database data>";  // Fetch and format database content
-    mqttManager->publishDatabaseEntry(topic, data);
+    wiringPiSetupGpio(); // Initializes GPIO with BCM numbering
+    pinMode(17, OUTPUT); // Set GPIO 17 as blue LED
+    pinMode(27, OUTPUT); // Set GPIO 27 as red LED
+    pinMode(22, OUTPUT); // Set GPIO 22 as green LED
 
 /***************************************RFID START***********************************************************************/
 
@@ -34,6 +33,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(rfidProcess, &QProcess::readyReadStandardOutput, this, &MainWindow::handleRFIDOutput);
     connect(rfidProcess, &QProcess::readyReadStandardError, this, &MainWindow::handleRFIDError);
     connect(rfidProcess, &QProcess::finished, this, &MainWindow::handleProcessFinished);
+
 
     // Start the RFID scanning
     startRFIDPolling();
@@ -45,11 +45,28 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->exitbutton, &QPushButton::clicked, this, &MainWindow::close);
     connect(ui->openDatabaseButton, &QPushButton::clicked, this, &MainWindow::openDatabaseDialog);
 
+    // Example buttons for controlling the LED
+    connect(ui->redButton, &QPushButton::clicked, this, &MainWindow::redButton);
+    connect(ui->greenButton, &QPushButton::clicked, this, &MainWindow::greenButton);
+    connect(ui->blueButton, &QPushButton::clicked, this, &MainWindow::blueButton);
+
+/***************************************MQTT START***********************************************************************/
+
     // Monitor MQTT connection state and update the UI
     connect(mqttManager->getClient(), &QMqttClient::stateChanged, this, [this](QMqttClient::ClientState state) {
     updateConnectionStatus(state == QMqttClient::Connected);
     setFocus();
     });
+
+    connect(mqttManager->getClient(), &QMqttClient::connected, this, [this]() {
+        if (QSqlDatabase::database().isOpen()) {
+            qDebug() << "Triggering initial database publish.";
+            mqttManager->publishDatabaseData();
+        }
+    });
+
+/***************************************MQTT END************************************************************************/
+
 }
 
 MainWindow::~MainWindow() {
@@ -64,7 +81,6 @@ MainWindow::~MainWindow() {
     delete rfidProcess;
     delete ui;
 }
-
 
 void MainWindow::connectToDatabase() {
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
@@ -98,6 +114,9 @@ void MainWindow::setupMqtt() {
     connect(mqttManager, &MqttManager::messageReceived, this, &MainWindow::handleIncomingMessage);
     connect(mqttManager->getClient(), &QMqttClient::stateChanged, this, [this](QMqttClient::ClientState state) {
         updateConnectionStatus(state == QMqttClient::Connected);
+
+        // Start publishing database updates every minute (60000 ms)
+        mqttManager->startPeriodicPublishing();
     });
 
     mqttManager->connectToBroker();
@@ -118,7 +137,7 @@ void MainWindow::updateConnectionStatus(bool connected) {
     }
 }
 
-void MainWindow::connectToMqttWithIpInput() {
+void MainWindow::connectToMqttWithIpInput() { //Opens text box to manually input IP and refers to mqtt functions
     bool ok;
     QString ip = QInputDialog::getText(this, tr("MQTT Broker IP"),
                                        tr("Enter MQTT Broker IP:"), QLineEdit::Normal,
@@ -140,23 +159,11 @@ void MainWindow::startRFIDPolling() {
     }
 }
 
-void MainWindow::pollRFID() {
-    QProcess process;
-    process.start("python", QStringList() << "/home/nick/Downloads/RFID-Database/RFIDScan.py");
-    process.waitForFinished();
-
-    QString output = process.readAllStandardOutput().trimmed();
-    if (!output.isEmpty()) {
-        ui->messageLabel->setText("Tag UID: " + output);  // Update the QLabel with the UID
-        qDebug() << "Detected RFID Tag UID:" << output;
-    }
-}
-
 void MainWindow::handleRFIDOutput() {
     QString output = rfidProcess->readAllStandardOutput().trimmed();
     if (!output.isEmpty()) {
-        ui->messageLabel->setText("Tag UID: " + output);
-        emit uidScanned(output);  // Emit UID to other parts of the program
+        ui->messageLabel->setText("Tag UID: " + output);  // Update the UI
+        emit uidScanned(output);  // Emit UID signal
         qDebug() << "Detected RFID Tag UID:" << output;
     }
 }
@@ -208,3 +215,30 @@ void MainWindow::startRFIDPythonScript() {
         ui->textEdit->append("Failed to start Python script.");
     }
 }
+
+void MainWindow::redButton() {
+    turnOffAllColors(); // Ensure no overlapping colors
+    digitalWrite(17, HIGH); // Turn on blue
+    digitalWrite(27, HIGH);
+    QTimer::singleShot(1000, this, &MainWindow::turnOffAllColors); // Turn off after 1 second
+}
+
+void MainWindow::greenButton() {
+    turnOffAllColors();
+    digitalWrite(27, HIGH); // Turn on red
+    digitalWrite(22, HIGH);
+    QTimer::singleShot(1000, this, &MainWindow::turnOffAllColors);
+}
+
+void MainWindow::blueButton() {
+    turnOffAllColors();
+    digitalWrite(22, HIGH); // Turn on green
+    QTimer::singleShot(1000, this, &MainWindow::turnOffAllColors);
+}
+
+void MainWindow::turnOffAllColors() {
+    digitalWrite(17, LOW); // Turn off blue
+    digitalWrite(27, LOW); // Turn off red
+    digitalWrite(22, LOW); // Turn off green
+}
+

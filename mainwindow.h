@@ -5,6 +5,8 @@
 #include <QLabel>
 #include <QDebug>
 #include <QProcess>
+#include <QTimer>
+#include <wiringPi.h>
 
 #include "mqttmanager.h"
 
@@ -28,7 +30,6 @@ private slots:
     void handleIncomingMessage(const QString &message, const QMqttTopicName &topic);
     void connectToMqttWithIpInput();
     void startRFIDPolling();
-    void pollRFID();
     void handleRFIDOutput();
     void handleProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
     void handleRFIDError();
@@ -40,6 +41,11 @@ private:
     void setupMqtt(); // Declare the setupMqtt method
     MqttManager *mqttManager;
     QProcess *rfidProcess;
+    void redButton();
+    void blueButton();
+    void greenButton();
+    void turnOffAllColors();
+    void raveButton();
 
 signals:
     void uidScanned(const QString &uid);  // Signal to emit scanned UID

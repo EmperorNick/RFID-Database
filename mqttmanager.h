@@ -20,6 +20,7 @@ public:
     QMqttClient* getClient() const { return client; }
     void publishDatabaseEntry(const QString &topic, const QString &data);
     void handleSubscribedData(const QString &topic, const QByteArray &message);
+    void publishDatabaseData(); // Periodic publishing function
 
 signals: // Add this signals section
     void messageReceived(const QString &message, const QMqttTopicName &topic); // Signal declaration
@@ -29,8 +30,6 @@ signals: // Add this signals section
 private slots:
     void onMessageReceived(const QByteArray &message, const QMqttTopicName &topic); // Updated parameter type
     void onConnected();
-    void publishDatabaseData(); // Periodic publishing function
-
 
 private:
     QMqttClient *client; // Pointer to the MQTT client

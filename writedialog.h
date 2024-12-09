@@ -13,7 +13,7 @@ class WriteDialog : public QDialog
     Q_OBJECT
 
 public slots:
-    void setUID(const QString &uid);  // Slot to receive and set the UID
+    void setUID(const QString &uid);
 
 public:
     explicit WriteDialog(QWidget *parent = nullptr);
